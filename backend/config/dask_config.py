@@ -11,7 +11,6 @@
 #we can easy connect python code with dask
 #we can easyly see the status 
 from dask.distributed import Client, LocalCluster
-
 def create_dask_client():
     print("Creating Dask cluster...")
 
@@ -20,9 +19,7 @@ def create_dask_client():
         threads_per_worker=2,
         memory_limit="1GB"
     )
-
     client = Client(cluster)   # IMPORTANT: Capital C
-
     print("Dask cluster created successfully!")
     return client
 
