@@ -1,53 +1,99 @@
-
-
-
-# def main():
-#     # Create a Dask client
-#     client = start_dask()
-#     print(client)
-#     print(f"Dashboard: {client.dashboard_link}")
-    
-#     # df = load_logs("data/sample_log.log")
-    
-#     start = time.time()
-#     # df = build_pipeline("data/sample_log.log")
-#     df = load_logs("data/sample_log.log")
-#     total_logs = df.count().compute()
-#     end = time.time()
-    
-#     # Now you can use the client to submit tasks to the Dask cluster
-#     # For example, you can use client.submit() to run a function on the cluster
-#     # result = client.submit(your_function, your_arguments)
-#     input("Press Enter to stop the cluster...") # give this line in code
-#     # Don't forget to close the client when you're done
-#     client.close()  
-
 from backend.config.dask_config import create_dask_client
-from backend.injection.parser import parse_log_line
-from backend.injection.loader import load_logs
+from backend.pipeline.processing import process_pipeline
+from backend.anamoly.detection import detect_anamoly
+from backend.config.email_config import send_anomaly_email
+import time
+
+
+ADMIN_EMAIL = "admin@example.com" 
 
 
 def main():
-    print("Starting Log Processing...")
-
-    # Start Dask
     client = create_dask_client()
-    print("Dask Started Successfully")
+    print(client)
+    print(f"Dashboard link: {client.dashboard_link}")
+    print("\n" + "=" * 50)
 
-    # Load logs
-    df = load_logs("backend/sample_data/log_data.log")
-    print("Logs Loaded Successfully")
+    start = time.time()
 
-    print("\nFirst 5 Parsed Logs:")
-    print(df.head())
+    # Build log processing pipeline
+    log_df = process_pipeline("backend/sample_data/log_data.log")
 
-    print("\nTotal Log Count:")
-    result = df.count().compute()
-    print(result)
+    total_logs = log_df.count().compute()
+    end = time.time()
 
-    client.close()
-    print("\nProcessing Finished Successfully!")
+    print("Total logs parsed:", total_logs)
+    print("Time taken:", round(end - start, 2), "seconds")
+
+    print("\n Running anomaly detection...")
+
+    # Detect anomalies
+    anomalies_df = detect_anamoly(log_df)
+
+    anomalies = anomalies_df
+
+    if anomalies.empty:
+        print("No anomalies detected")
+    else:
+        print(f"🚨 {len(anomalies)} anomalies detected!")
+
+        for _, row in anomalies.iterrows():
+            anomaly_data = {
+                "timestamp": row["timestamp"],
+                "error_count": row["error_count"],
+                "z_score": row["z_score"]
+            }
+
+            send_anomaly_email(
+                to_email=ADMIN_EMAIL,
+                anomaly=anomaly_data
+            )
+
+            print(
+                f"📧 Alert sent | Time: {row['timestamp']} | "
+                f"Errors: {row['error_count']}"
+            )
+
+    input("\nPress Enter to exit...")
 
 
 if __name__ == "__main__":
     main()
+
+
+# import time
+# from datetime import datetime
+# from backend.config.dask_config import create_dask_client
+# from backend.pipeline.processing import process_pipeline
+
+# def main():
+#     print("Starting Log Processing...")
+
+#     client = create_dask_client()
+#     print("Dask Started Successfully")
+#     print(f"dashboard:{client.dashboard_link}")
+
+#     start = datetime.now()
+#     print("Start Time:", start)
+
+#     df = process_pipeline("backend/sample_data/log_data.log")
+#     print("Logs Loaded Successfully")
+
+#     print("\nFirst 5 Rows:")
+    
+#     print(df.head())
+
+#     print("\nLog Count by Level:")
+#     result = df.count().compute()
+#     print(result)
+
+#     end = datetime.now()
+#     print("End Time:", end)
+
+#     print("Execution Time:", (end - start).total_seconds(), "seconds")
+
+#     input("Press Enter to stop the cluster...")
+#     client.close()
+
+# if __name__ == "__main__":
+#     main()
