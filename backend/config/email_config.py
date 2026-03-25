@@ -2,6 +2,7 @@ from typing import Dict
 from email.message import EmailMessage
 import smtplib
 
+
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
 EMAIL = "jangilisrividya@gmail.com"
